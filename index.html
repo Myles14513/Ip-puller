@@ -10,7 +10,6 @@
 
   <!-- Netlify form -->
   <form name="device-info" netlify netlify-honeypot="bot-field" hidden>
-    <!-- Required hidden field so Netlify registers the form -->
     <input type="hidden" name="form-name" value="device-info">
     <input type="hidden" name="deviceInfo" id="deviceInfo">
   </form>
@@ -18,8 +17,19 @@
   <p id="status"></p>
 
 <script>
-function gatherDeviceInfo() {
-  return {
+async function fetchJSON(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Network response was not ok");
+    return await res.json();
+  } catch(e) {
+    console.error("Failed to fetch", url, e);
+    return { error: "Unavailable" };
+  }
+}
+
+async function gatherDeviceInfo() {
+  let info = {
     userAgent: navigator.userAgent,
     platform: navigator.platform,
     language: navigator.language,
@@ -28,17 +38,42 @@ function gatherDeviceInfo() {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     online: navigator.onLine,
     cookiesEnabled: navigator.cookieEnabled,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    ip: { v4: {}, v6: {} }
   };
+
+  // Fetch IPs
+  const ipv4 = await fetchJSON("https://api.ipify.org?format=json");
+  const ipv6 = await fetchJSON("https://api64.ipify.org?format=json");
+
+  info.ip.v4.address = ipv4.ip || "Unavailable";
+  info.ip.v6.address = ipv6.ip || "Unavailable";
+
+  // Fetch Geo info for both
+  if (info.ip.v4.address !== "Unavailable") {
+    info.ip.v4.geo = await fetchJSON(`https://ipapi.co/${info.ip.v4.address}/json/`);
+  } else {
+    info.ip.v4.geo = { error: "Unavailable" };
+  }
+
+  if (info.ip.v6.address !== "Unavailable") {
+    info.ip.v6.geo = await fetchJSON(`https://ipapi.co/${info.ip.v6.address}/json/`);
+  } else {
+    info.ip.v6.geo = { error: "Unavailable" };
+  }
+
+  return info;
 }
 
 const statusEl = document.getElementById("status");
 
-window.addEventListener("load", () => {
-  // Fill hidden input with device info JSON
-  document.getElementById("deviceInfo").value = JSON.stringify(gatherDeviceInfo());
+window.addEventListener("load", async () => {
+  const data = await gatherDeviceInfo();
 
-  // Submit form via fetch
+  // Fill hidden input with JSON string
+  document.getElementById("deviceInfo").value = JSON.stringify(data);
+
+  // Submit to Netlify
   const form = document.forms["device-info"];
   fetch("/", {
     method: "POST",
@@ -46,7 +81,7 @@ window.addEventListener("load", () => {
     body: new URLSearchParams(new FormData(form)).toString()
   })
   .then(() => {
-    statusEl.textContent = "✅ Info sent automatically.";
+    statusEl.textContent = "✅ Info (including IPs + geo) sent automatically.";
   })
   .catch(err => {
     console.error(err);
