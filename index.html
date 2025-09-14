@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Device Info Auto Submit</title>
+</head>
+<body>
+  <h1>Device Info Collector</h1>
+
+  <form name="device-info" netlify netlify-honeypot="bot-field" hidden>
+    <input type="hidden" name="deviceInfo" id="deviceInfo">
+  </form>
+
+  <p id="status"></p>
+
+<script>
+function gatherDeviceInfo() {
+  return {
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    screen: { w: screen.width, h: screen.height, cd: screen.colorDepth },
+    viewport: { w: window.innerWidth, h: window.innerHeight },
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    online: navigator.onLine,
+    cookiesEnabled: navigator.cookieEnabled,
+    timestamp: new Date().toISOString()
+  };
+}
+
+const statusEl = document.getElementById("status");
+
+// Run once page loads
+window.addEventListener("load", () => {
+  document.getElementById("deviceInfo").value = JSON.stringify(gatherDeviceInfo());
+
+  const form = document.forms["device-info"];
+  fetch("/", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(new FormData(form)).toString()
+  })
+  .then(() => {
+    statusEl.textContent = "✅ Info sent automatically.";
+  })
+  .catch(err => {
+    console.error(err);
+    statusEl.textContent = "❌ Failed to send.";
+  });
+});
+</script>
+</body>
+</html>
