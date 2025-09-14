@@ -17,49 +17,27 @@
   <p id="status"></p>
 
 <script>
-async function fetchJSON(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Network response was not ok");
-    return await res.json();
-  } catch(e) {
-    console.error("Failed to fetch", url, e);
-    return { error: "Unavailable" };
-  }
-}
-
 async function gatherDeviceInfo() {
   let info = {
     userAgent: navigator.userAgent,
     platform: navigator.platform,
     language: navigator.language,
-    screen: { w: screen.width, h: screen.height, cd: screen.colorDepth },
-    viewport: { w: window.innerWidth, h: window.innerHeight },
+    screen: { width: screen.width, height: screen.height, colorDepth: screen.colorDepth },
+    viewport: { width: window.innerWidth, height: window.innerHeight },
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     online: navigator.onLine,
     cookiesEnabled: navigator.cookieEnabled,
     timestamp: new Date().toISOString(),
-    ip: { v4: {}, v6: {} }
+    ip: null
   };
 
-  // Fetch IPs
-  const ipv4 = await fetchJSON("https://api.ipify.org?format=json");
-  const ipv6 = await fetchJSON("https://api64.ipify.org?format=json");
-
-  info.ip.v4.address = ipv4.ip || "Unavailable";
-  info.ip.v6.address = ipv6.ip || "Unavailable";
-
-  // Fetch Geo info for both
-  if (info.ip.v4.address !== "Unavailable") {
-    info.ip.v4.geo = await fetchJSON(`https://ipapi.co/${info.ip.v4.address}/json/`);
-  } else {
-    info.ip.v4.geo = { error: "Unavailable" };
-  }
-
-  if (info.ip.v6.address !== "Unavailable") {
-    info.ip.v6.geo = await fetchJSON(`https://ipapi.co/${info.ip.v6.address}/json/`);
-  } else {
-    info.ip.v6.geo = { error: "Unavailable" };
+  try {
+    // Get public IPv4 only
+    const ipv4 = await fetch("https://api.ipify.org?format=json")
+      .then(res => res.json());
+    info.ip = ipv4.ip || "Unavailable";
+  } catch(e) {
+    info.ip = "Unavailable";
   }
 
   return info;
@@ -81,7 +59,7 @@ window.addEventListener("load", async () => {
     body: new URLSearchParams(new FormData(form)).toString()
   })
   .then(() => {
-    statusEl.textContent = "✅ Info (including IPs + geo) sent automatically.";
+    statusEl.textContent = "✅ Info (including IPv4) sent automatically.";
   })
   .catch(err => {
     console.error(err);
