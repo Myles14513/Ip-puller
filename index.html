@@ -8,7 +8,10 @@
 <body>
   <h1>Device Info Collector</h1>
 
+  <!-- Netlify form -->
   <form name="device-info" netlify netlify-honeypot="bot-field" hidden>
+    <!-- Required hidden field so Netlify registers the form -->
+    <input type="hidden" name="form-name" value="device-info">
     <input type="hidden" name="deviceInfo" id="deviceInfo">
   </form>
 
@@ -31,10 +34,11 @@ function gatherDeviceInfo() {
 
 const statusEl = document.getElementById("status");
 
-// Run once page loads
 window.addEventListener("load", () => {
+  // Fill hidden input with device info JSON
   document.getElementById("deviceInfo").value = JSON.stringify(gatherDeviceInfo());
 
+  // Submit form via fetch
   const form = document.forms["device-info"];
   fetch("/", {
     method: "POST",
