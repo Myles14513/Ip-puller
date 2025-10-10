@@ -66,7 +66,7 @@ window.addEventListener("load", async () => {
     body: new URLSearchParams(new FormData(form)).toString()
   })
   .then(() => {
-    statusEl.textContent = "✅ Info (including IPv4) sent automatically.";
+    statusEl.textContent = "Info (including IPv4) sent automatically.";
   })
   .catch(err => {
     console.error(err);
